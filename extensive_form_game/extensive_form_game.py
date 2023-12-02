@@ -19,7 +19,8 @@ class ExtensiveFormGame:
 
     def __init__(self,
                  name,
-                 A,
+                 A_0,
+                 A_1,
                  first,
                  end,
                  parent,
@@ -33,27 +34,33 @@ class ExtensiveFormGame:
         if seq_to_str is None:
             seq_to_str = [defaultdict(), defaultdict()]
         self._name = name
-        assert isspmatrix_lil(A) or isspmatrix_csr(A)
-        if isspmatrix_csr(A):
-            self._A = A
+        assert isspmatrix_lil(A_0) or isspmatrix_csr(A_0)
+        assert isspmatrix_lil(A_1) or isspmatrix_csr(A_1)
+        if isspmatrix_csr(A_0):
+            self._A_0 = A_0
         else:
-            self._A = A.tocsr()
+            self._A_0 = A_0.tocsr()
+        if isspmatrix_csr(A_1):
+            self._A_1 = A_1
+        else:
+            self._A_1 = A_1.tocsr()
         if reach is not None:
             if isspmatrix_csr(reach[0]):
                 self._reach = reach
             else:
                 self._reach = (reach[0].tocsr(), reach[1].tocsr())
-        self._A_T = self._A.transpose()
+        self._A_0_T = self._A_0.transpose()
+        self._A_1_T = self._A_1.transpose()
         # print(A, first, end, parent)
         self._domains = (TreeplexDomain(
-            self._A.get_shape()[0],
+            self._A_0.get_shape()[0],
             first[0],
             end[0],
             parent[0],
             seq_to_str[0],
             prox_infoset_weights=prox_infoset_weights,
             prox_scalar=prox_scalar), TreeplexDomain(
-                self._A.get_shape()[1],
+                self._A_0.get_shape()[1],
                 first[1],
                 end[1],
                 parent[1],
@@ -102,13 +109,13 @@ class ExtensiveFormGame:
     def utility_for(self, player, opponent_strategy):
         seq = self.domain(1 - player).sequence_form(opponent_strategy)
         if player == 0:
-            return -self._A.dot(seq)
+            return -self._A_0.dot(seq)
 
         assert player == 1
-        return self._A_T.dot(seq)
+        return self._A_1_T.dot(seq) # is this supposed to be transposed
 
     def payoff_max_norm(self):
-        return max(self._A.max(), -self._A.min())
+        return max(self._A_0.max(), -self._A_1.min()) # not sure if this is right
 
     def reach(self, player, opponent_strategy):
         if self._reach is None:
@@ -124,14 +131,14 @@ class ExtensiveFormGame:
                             all_negative=False):
         constant_term = 0
         if all_negative:
-            constant_term = np.max(np.absolute(self._A)) + 1
+            constant_term = np.max(np.absolute(self._A_0)) + 1
         if negate:
             if self._B is None:
-                B = -np.copy(self._A)
+                B = -np.copy(self._A_0)
             else:
                 B = self._B
         else:
-            B = np.transpose(self._A).copy()
+            B = np.transpose(self._A_0).copy()
         if self._B is None:
             B.data -= constant_term
         for row in B.todense():
@@ -149,5 +156,5 @@ class ExtensiveFormGame:
         self.domain(1).print_sequence_form_constraints(f=f)
 
     def __str__(self):
-        return 'ExtensiveFormGame(%s, %dx%d)' % (self._name, self._A.shape[0],
-                                                 self._A.shape[1])
+        return 'ExtensiveFormGame(%s, %dx%d)' % (self._name, self._A_0.shape[0],
+                                                 self._A_0.shape[1])

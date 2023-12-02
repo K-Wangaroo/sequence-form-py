@@ -94,6 +94,7 @@ def init_efg(num_ranks=3,
         # print
         if all_negative:
             offset = -3
+        
         A[bet_p1, call_p2] = winner * 2
         A[bet_p1, fold_p2] = -alpha
         A[check_p1, check_p2] = winner * 1
@@ -109,6 +110,7 @@ def init_efg(num_ranks=3,
         return efg.ExtensiveFormGame(
             "Kuhn%d EFG" % num_ranks,
             A,
+            A,
             (first_p1, first_p2),
             (end_p1, end_p2),
             (parent_p1, parent_p2),
@@ -120,6 +122,7 @@ def init_efg(num_ranks=3,
     else:
         return efg.ExtensiveFormGame(
             "Kuhn%d EFG" % num_ranks,
+            A,
             A,
             (first_p1, first_p2),
             (end_p1, end_p2),

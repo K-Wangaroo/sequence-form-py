@@ -289,6 +289,17 @@ for alg_idx, alg in enumerate(algs_to_run):
             break
 
     print('EOD', file=gnuplot_out)
+    profile = opt.profile()
+    print("Player 0 Profile:")
+    print("bet / check / call / fold")
+    for i in range(3):
+        print("Rank " + str(i))
+        print(profile[0][i*4+1:(i+1)*4+1]) 
+    print("Player 1 Profile:")
+    print("call / fold / bet / check")
+    for i in range(3):
+        print("Rank " + str(i))
+        print(profile[1][i*4+1:(i+1)*4+1]) 
 
 print("""
 set terminal png
