@@ -112,7 +112,7 @@ class ExtensiveFormGame:
             return -self._A_0.dot(seq)
 
         assert player == 1
-        return self._A_1_T.dot(seq) # is this supposed to be transposed
+        return self._A_1_T.dot(seq) # is this supposed to be transposed? probably? -- what about how 
 
     def payoff_max_norm(self):
         return max(self._A_0.max(), -self._A_1.min()) # not sure if this is right

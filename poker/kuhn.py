@@ -44,6 +44,10 @@ def init_matrix(num_ranks=3):
 create Kuhn EFG
 """
 
+def calc_utility(x, risk_alpha = 1, initial = 3):
+    x*=-1
+    return -(((initial+x)**risk_alpha)/risk_alpha - (initial**risk_alpha)/risk_alpha)
+
 
 def init_efg(num_ranks=3,
              prox_infoset_weights=False,
@@ -72,9 +76,11 @@ def init_efg(num_ranks=3,
         list(chain.from_iterable((0, 0) for i in range(0, num_ranks))))
 
     if integer:
-        A = lil_matrix(dimension, dtype=int)
+        A_0 = lil_matrix(dimension, dtype=int)
+        A_1 = lil_matrix(dimension, dtype=int)
     else:
-        A = lil_matrix(dimension)
+        A_0 = lil_matrix(dimension)
+        A_1 = lil_matrix(dimension)
     reach = (lil_matrix((len(first_p1), dimension[1])), lil_matrix(
         (len(first_p2), dimension[0])))
     for c1, c2 in product(range(0, num_ranks), repeat=2):
@@ -95,11 +101,23 @@ def init_efg(num_ranks=3,
         if all_negative:
             offset = -3
         
-        A[bet_p1, call_p2] = winner * 2
-        A[bet_p1, fold_p2] = -alpha
-        A[check_p1, check_p2] = winner * 1
-        A[call_p1, bet_p2] = winner * 2
-        A[fold_p1, bet_p2] = alpha
+        risk_alpha_0 = 0.01
+        risk_alpha_1 = 0.01
+        # utility negative if A_0 wins
+		# so A_0 wins means that value = -2*alpha
+		# winner means the value passed in should be positive
+        A_0[bet_p1, call_p2] = calc_utility(winner * 2, risk_alpha_0)
+        A_0[bet_p1, fold_p2] = calc_utility(-alpha, risk_alpha_0)
+        A_0[check_p1, check_p2] = calc_utility(winner * 1, risk_alpha_0)
+        A_0[call_p1, bet_p2] = calc_utility(winner * 2, risk_alpha_0)
+        A_0[fold_p1, bet_p2] = calc_utility(alpha, risk_alpha_0)
+        
+		# A_0 wins means that it is +2 * alpha, so we pass in 0.66
+        A_1[bet_p1, call_p2] = calc_utility(-winner * 2, risk_alpha_1)
+        A_1[bet_p1, fold_p2] = calc_utility(alpha, risk_alpha_1)
+        A_1[check_p1, check_p2] = calc_utility(-winner * 1, risk_alpha_1)
+        A_1[call_p1, bet_p2] = calc_utility(-winner * 2, risk_alpha_1)
+        A_1[fold_p1, bet_p2] = calc_utility(-alpha, risk_alpha_1)
 
         reach[0][c1 * 2, 0] = 1.0 / num_ranks
         reach[0][c1 * 2 + 1, bet_p2] = alpha
@@ -109,8 +127,8 @@ def init_efg(num_ranks=3,
     if all_negative:
         return efg.ExtensiveFormGame(
             "Kuhn%d EFG" % num_ranks,
-            A,
-            A,
+            A_0,
+            -A_1,
             (first_p1, first_p2),
             (end_p1, end_p2),
             (parent_p1, parent_p2),
@@ -120,10 +138,13 @@ def init_efg(num_ranks=3,
             all_negative=all_negative,
             offset=2 * offset * (num_ranks * (num_ranks - 1)), )
     else:
+        print(A_0)
+        print("///")
+        print(A_1)
         return efg.ExtensiveFormGame(
             "Kuhn%d EFG" % num_ranks,
-            A,
-            A,
+            A_0,
+            -A_1,
             (first_p1, first_p2),
             (end_p1, end_p2),
             (parent_p1, parent_p2),
