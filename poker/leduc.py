@@ -17,7 +17,7 @@ def init_efg(num_ranks=3,
     else:
         hand_combinations = 1.0 / float(deck_size * (deck_size - 1))
         rollout_combinations = 1.0 / float(deck_size * (deck_size - 1) * \
-                                     (deck_size - 2))
+                                     (deck_size - 2)) 
 
     parent = ([], [])
     begin = ([], [])
@@ -31,24 +31,26 @@ def init_efg(num_ranks=3,
     if all_negative:
         payoff_shift = -15
         payoff_p1 = []
+    # ignore this ^^
 
-    def _p_chance(rnd, board, i, j):
-        if rnd == 0:
+    # used to calculate chance outcomes
+	def _p_chance(rnd, board, i, j): 
+        if rnd == 0: # pre flop
             if i == j:
                 return 2 * hand_combinations
             return 4 * hand_combinations
-        if i == board and j == board:
+        if i == board and j == board: # having same card as opponent affects probabilities
             return 0
         elif i == board or j == board or i == j:
             return 4 * rollout_combinations
         return 8 * rollout_combinations
 
-    def _build_terminal(rnd, board, value, previous_seq):
+    def _build_terminal(rnd, board, value, previous_seq): #takes in a value function and the player ranks
         for i in range(num_ranks):
             for j in range(num_ranks):
                 payoff.append((previous_seq[0][i], previous_seq[1][j],
                                _p_chance(rnd, board, i, j) *
-                               (value(i, j) + payoff_shift)))
+                               (value(i, j) + payoff_shift))) # stores p1 index, p2 index, and value * P(outcome)
                 if all_negative:
                     payoff_p1.append((
                         previous_seq[0][i], previous_seq[1][j],
@@ -64,8 +66,8 @@ def init_efg(num_ranks=3,
 
         _build_terminal(rnd, board, _value, previous_seq)
 
-    def _build_showdown(rnd, board, win_amount, previous_seq):
-        def _value(i, j):
+    def _build_showdown(rnd, board, win_amount, previous_seq): # returns int based on who won
+        def _value(i, j): # negative when P1 wins
             if i == board:
                 return -win_amount
             elif j == board:
@@ -78,31 +80,41 @@ def init_efg(num_ranks=3,
 
         _build_terminal(rnd, board, _value, previous_seq)
 
-    def _build(rnd, board, actor, num_bets, pot, previous_seq):
+    def _build(rnd, board, actor, num_bets, pot, previous_seq): 
         opponent = 1 - actor
-        facing = pot[opponent] - pot[actor]
+        facing = pot[opponent] - pot[actor] # the bet we are facing
+		# e.g. if our opponent has put more than we did in the pot that means we are facing a bet
         pot_actor = pot[actor]
-        num_actions = (facing >
-                       0) + 1 + (num_bets < max_bets) * num_raise_sizes
-        action = 0
-        first_action = actor == 0 and num_bets == 0
+        num_actions = (facing > # call/check, can fold if facing > 0, can raise if allowed (let's just do one size)
+                       0) + 1 + (num_bets < max_bets) * num_raise_sizes 
+        action = 0 # action is used for indexing
+        first_action = actor == 0 and num_bets == 0 # indicator(first action)
 
-        info_set = len(begin[actor])
+        # this is basically indexing the same way that kuhn did:
+		# e.g. after first iteration for player 0, parent = [0,0,0], start = [1,3,5], end = [3,5,7]
+		# info_set tracks the START of the next set of actions
+		info_set = len(begin[actor])
         for i in range(num_ranks):
             parent[actor].append(previous_seq[actor][i])
             begin[actor].append(next_s[actor])
             next_s[actor] += num_actions
             end[actor].append(next_s[actor])
             for j in range(num_ranks):
+                # we can ignore reach -- this is meant to encode probabilities but we can do that in payoffs directly
                 reach.append((actor, info_set + i, previous_seq[opponent][j],
                               _p_chance(rnd, board, i, j)))
 
-        def _pn(idx):
+        # this generates the previous_seq array for the next iteration
+		# e.g maybe idx 0 is fold, 1 is call/check, etc.
+		# and we index through the begin/end array by rank (i) and by action (idx)
+		# begin is [infoset0action0_rank0, infoset0action0_rank1, ..., infoset0action1rank0, ...,infoset1action0rank0, etc.]
+		def _pn(idx):
             t = [begin[actor][info_set + i] + idx for i in range(num_ranks)]
             if actor == 0:
                 return (t, previous_seq[1])
             return (previous_seq[0], t)
 
+		# building actions: we recursively generate possible all possible future actions
         if facing > 0:
             _build_fold(rnd, board, actor, pot[actor], _pn(action))
             action += 1
@@ -117,7 +129,8 @@ def init_efg(num_ranks=3,
             _build_showdown(rnd, board, pot[actor], _pn(action))
         action += 1
 
-        if num_bets < max_bets:
+        # generate bets
+		if num_bets < max_bets:
             if rnd == 0:
                 init_raise_size = 2
             else:
@@ -133,6 +146,7 @@ def init_efg(num_ranks=3,
         pot[actor] = pot_actor
 
     previous_seq = ([0] * num_ranks, [0] * num_ranks)
+    # rnd, board, actor, num_bets, pot, previous_seq -- _build is recursive
     _build(0, -1, 0, 0, [1, 1], previous_seq)
 
     if integer:
