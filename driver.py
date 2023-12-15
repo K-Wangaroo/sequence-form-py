@@ -238,8 +238,8 @@ for alg_idx, alg in enumerate(algs_to_run):
     total_time = time.time() - t0
     if not to_csv:
         print(opt)
-        print('iters\tgrads\teps\t\tprofile_val\ttime')
-    eps_initial = opt.epsilon()
+        print('iters\tgrads\teps\teps_nonzero\t\tprofile_val\ttime')
+    eps_initial, eps_initial_full = opt.epsilon()
     profile_val_initial = opt.profile_value()
 
     alg_names.append(str(opt))
@@ -259,13 +259,14 @@ for alg_idx, alg in enumerate(algs_to_run):
         t0 = time.time()
         opt.iterate(delta)
         total_time += time.time() - t0
-        eps = opt.epsilon()
+        eps, eps_nonzero = opt.epsilon()
         profile_val = opt.profile_value()
         if to_csv:
-            print('{iters},{gradients},{eps},{profile_val},{algorithm},{time}'.format(
+            print('{iters},{gradients},{eps},{eps_nonzero},{profile_val},{algorithm},{time}'.format(
                 iters=print_seq[i],
                 gradients=opt.gradient_computations(),
                 eps=eps,
+		eps_nonzero=eps_nonzero,
                 profile_val=profile_val,
                 algorithm=opt,
                 time=total_time
@@ -281,10 +282,11 @@ for alg_idx, alg in enumerate(algs_to_run):
                         profile_val=profile_val,
                         egv=opt.excessive_gap(), ))
             else:
-                print('{iters}\t{grads}\t{eps:.6f}\t{profile_val:.6f}\t{time:.6f}'.format(
+                print('{iters}\t{grads}\t{eps:.6f}\t{eps_nonzero:.6f}\t{profile_val:.6f}\t{time:.6f}'.format(
                     iters=print_seq[i],
                     grads=opt.gradient_computations(),
                     eps=eps,
+		    eps_nonzero=eps_nonzero,
                     profile_val=profile_val,
                     time=total_time
                 ))
