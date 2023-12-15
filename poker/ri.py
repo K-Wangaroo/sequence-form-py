@@ -4,6 +4,7 @@
 
 from extensive_form_game import extensive_form_game as efg
 from scipy.sparse import lil_matrix
+import json
 
 
 def init_efg(num_ranks=3,
@@ -14,6 +15,8 @@ def init_efg(num_ranks=3,
 			 num_raise_sizes=1,
 			 max_bets=2):
 	assert num_ranks >= 2
+
+	search = {0: {0: {"action seq": []}}, 1: {0: {"action seq": []}}}
 	
 	num_suits = 4
 	deck_size = num_ranks * num_suits # change this later when suits change
@@ -176,7 +179,12 @@ def init_efg(num_ranks=3,
         # High card
 		return 1, ranks
 
-	def _build(rnd, board, actor, num_bets, pot, previous_seq): 
+	def id_to_card(id):
+		rank = id // 4
+		suit = id % 4
+		return (rank, suit)
+	
+	def _build(rnd, board, actor, num_bets, pot, previous_seq, prev_action_seq): 
 		opponent = 1 - actor
 		facing = pot[opponent] - pot[actor] # the bet we are facing
 		# e.g. if our opponent has put more than we did in the pot that means we are facing a bet
@@ -195,6 +203,39 @@ def init_efg(num_ranks=3,
 			begin[actor].append(next_s[actor])
 			next_s[actor] += num_actions
 			end[actor].append(next_s[actor])
+
+			
+			
+			if facing > 0:
+				action_ch = 'fold'
+			else:
+				action_ch = 'check/call'
+			for node in range(begin[actor][-1], end[actor][-1]):
+				action_seq = prev_action_seq + [("p" + str(actor), rnd, action_ch)]
+				if node in search[actor].keys():
+					print("ERROR: node exists in search")
+					assert(1 == 0)
+				if str((id_to_card(i), board, tuple(action_seq))) in search[actor].keys():
+					print(search[actor])
+					print("ERROR: action seq exists in search")
+					print("player: " + str(actor))
+					print("round: " + str(rnd))
+					print("pot: " + str(pot))
+					print("node: " + str(node))
+					print("parent: " + str(parent[actor][-1]))
+					
+					print("action seq" + str((id_to_card(i), board, tuple(action_seq + [(rnd, action_ch)]))))
+					
+					print(search[actor][str((id_to_card(i), board, tuple(action_seq + [(rnd, action_ch)])))])
+					assert(1 == 0)
+				search[actor][node] = {"player": actor, "round": rnd, "hand": id_to_card(i), "board": board, "pot": pot, "parent": parent[actor][-1], "node": node, "action seq": action_seq}
+				search[actor][str((id_to_card(i), board, tuple(action_seq)))] = {"player": actor, "round": rnd, "hand": id_to_card(i), "board": board, "pot": pot, "parent": parent[actor][-1], "node": node, "action seq": action_seq}
+				if action_ch == 'fold':
+					action_ch = 'check/call'
+				elif action_ch == 'check/call':
+					action_ch = 'raise1'
+				elif action_ch[:6] == 'raise':
+					action_ch = 'raise' + str(int(action_ch[6]) + 1)
 			# for j in range(num_ranks):
 			#     # we can ignore reach -- this is meant to encode probabilities but we can do that in payoffs directly
 			#     reach.append((actor, info_set + i, previous_seq[opponent][j],
@@ -217,16 +258,16 @@ def init_efg(num_ranks=3,
 
 		pot[actor] = pot[opponent]
 		if first_action:  #  check
-			_build(rnd, board, opponent, 0, pot, _pn(action))
+			_build(rnd, board, opponent, 0, pot, _pn(action), prev_action_seq + [("p" + str(actor), rnd, 'check/call')])
 		elif rnd + 1 < 3:  #  call and deal board card
 			if rnd == 0:
 				for rank in range(num_ranks):
 					for suit in range(num_suits):
-						_build(rnd + 1, [(rank, suit), -1], 0, 0, pot, _pn(action))		
+						_build(rnd + 1, [(rank, suit), -1], 0, 0, pot, _pn(action), prev_action_seq + [("p" + str(actor), rnd, 'check/call')])		
 			else: # round = 1
 				for rank in range(num_ranks):
 					for suit in range(num_suits):
-						_build(rnd + 1, [board[0], (rank,suit)], 0, 0, pot, _pn(action))
+						_build(rnd + 1, [board[0], (rank,suit)], 0, 0, pot, _pn(action), prev_action_seq + [("p" + str(actor), rnd, 'check/call')])
 		else:  #  call and showdown
 			_build_showdown(rnd, board, pot[actor], _pn(action))
 		action += 1
@@ -237,12 +278,14 @@ def init_efg(num_ranks=3,
 				init_raise_size = 2
 			else:
 				init_raise_size = 4
+			raise_num = 1
 			for raise_amt in [
 					init_raise_size * raise_size
 					for raise_size in range(1, num_raise_sizes + 1)
 			]:
 				pot[actor] = pot[opponent] + raise_amt
-				_build(rnd, board, opponent, 1 + num_bets, pot, _pn(action))
+				_build(rnd, board, opponent, 1 + num_bets, pot, _pn(action), prev_action_seq + [("p" + str(actor), rnd, f'raise{raise_num}')])
+				raise_num += 1
 				action += 1
 
 		pot[actor] = pot_actor
@@ -251,7 +294,12 @@ def init_efg(num_ranks=3,
 	previous_seq = ([0] * deck_size, [0] * deck_size)
 	# rnd, board, actor, num_bets, pot, previous_seq -- _build is recursive
 	# each card is enumerated as an ID
-	_build(0, [-1, -1], 0, 0, [1, 1], previous_seq)
+	_build(0, [-1, -1], 0, 0, [1, 1], previous_seq, [])
+	with open("search.json", "w") as outfile: 
+		json.dump(search, outfile)
+
+	# with open(r'search.txt', 'w+') as f:
+	# 	f.write(str(search))
 
 	payoff_matrix = [None, None]
 	# payoff matrix is negative for player 1 winning, should pass in the same one
