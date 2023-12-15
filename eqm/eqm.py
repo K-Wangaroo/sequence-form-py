@@ -11,8 +11,10 @@ class EquilibriumAlgorithm:
         return self._x, self._y
 
     def epsilon(self):
-        eps, _, _, _ = self._game.profile_epsilon(self._x, self._y)
-        return eps
+        # eps, _, _, _ = self._game.profile_epsilon(self._x, self._y)
+        eps_zero_sum, saddle_x, saddle_y, _, _ = self._game.profile_epsilon(self._x, self._y)
+        eps_nonzero = saddle_x + saddle_y
+        return eps_zero_sum, eps_nonzero
 
     def profile_value(self):
         val = self._game.profile_value(self._x, self._y)
@@ -26,3 +28,4 @@ class EquilibriumAlgorithm:
 
     def __repr__(self):
         return self._name
+

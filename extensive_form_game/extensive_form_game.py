@@ -81,14 +81,32 @@ class ExtensiveFormGame:
         return self._domains[player]
 
     def profile_epsilon(self, x, y):
-        value = self.profile_value(x, y)
+        value_x = self.profile_value_x(x, y)
+        value_y = self.profile_value_y(x, y)
         br_x, _ = self.domain(0).support(self.utility_for(0, y))
+        print("***Player 1 utility: ", br_x)
         br_y, _ = self.domain(1).support(self.utility_for(1, x))
-        return br_x + br_y, br_x - value, br_y + value, value
+        print("***Player 2 utility: ", br_y)
+        # return br_x + br_y, br_x - value, br_y + value, value
+        print("value_x: " + str(value_x))
+        print("br_x: " + str(br_x))
+        print("value_y: " + str(value_y))
+        print("br_y: " + str(br_y))
+        print(value_y) # y dot A_1_T dot x
+        return br_x + br_y, br_x - value_x, -value_y + br_y, value_x, value_y
 
+    # original
     def profile_value(self, x, y):
         seq = self.domain(0).sequence_form(x)
         return np.dot(seq, self.utility_for(0, y))
+
+    def profile_value_x(self, x, y):
+        seq = self.domain(0).sequence_form(x)
+        return np.dot(seq, self.utility_for(0, y))
+    
+    def profile_value_y(self, x, y):
+        seq = self.domain(1).sequence_form(y)
+        return np.dot(seq, self.utility_for(1, x))
 
     def max_infoset_regret(self, x, y):
         return max(
@@ -112,7 +130,7 @@ class ExtensiveFormGame:
             return -self._A_0.dot(seq)
 
         assert player == 1
-        return self._A_1_T.dot(seq) # is this supposed to be transposed? probably? -- what about how 
+        return self._A_1_T.dot(seq) # is this supposed to be transposed
 
     def payoff_max_norm(self):
         return max(self._A_0.max(), -self._A_1.min()) # not sure if this is right
@@ -158,3 +176,4 @@ class ExtensiveFormGame:
     def __str__(self):
         return 'ExtensiveFormGame(%s, %dx%d)' % (self._name, self._A_0.shape[0],
                                                  self._A_0.shape[1])
+
