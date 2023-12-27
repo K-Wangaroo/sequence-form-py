@@ -1,3 +1,7 @@
+# step 1: doing suits (the slow way)
+# 2: more rounds of betting
+# 3: doing suits (the fast way)
+
 from extensive_form_game import extensive_form_game as efg
 from scipy.sparse import lil_matrix
 
@@ -34,7 +38,7 @@ def init_efg(num_ranks=3,
     # ignore this ^^
 
     # used to calculate chance outcomes
-	def _p_chance(rnd, board, i, j): 
+    def _p_chance(rnd, board, i, j): 
         if rnd == 0: # pre flop
             if i == j:
                 return 2 * hand_combinations
@@ -93,7 +97,7 @@ def init_efg(num_ranks=3,
         # this is basically indexing the same way that kuhn did:
 		# e.g. after first iteration for player 0, parent = [0,0,0], start = [1,3,5], end = [3,5,7]
 		# info_set tracks the START of the next set of actions
-		info_set = len(begin[actor])
+        info_set = len(begin[actor])
         for i in range(num_ranks):
             parent[actor].append(previous_seq[actor][i])
             begin[actor].append(next_s[actor])
@@ -108,7 +112,7 @@ def init_efg(num_ranks=3,
 		# e.g maybe idx 0 is fold, 1 is call/check, etc.
 		# and we index through the begin/end array by rank (i) and by action (idx)
 		# begin is [infoset0action0_rank0, infoset0action0_rank1, ..., infoset0action1rank0, ...,infoset1action0rank0, etc.]
-		def _pn(idx):
+        def _pn(idx):
             t = [begin[actor][info_set + i] + idx for i in range(num_ranks)]
             if actor == 0:
                 return (t, previous_seq[1])
@@ -130,7 +134,7 @@ def init_efg(num_ranks=3,
         action += 1
 
         # generate bets
-		if num_bets < max_bets:
+        if num_bets < max_bets:
             if rnd == 0:
                 init_raise_size = 2
             else:
@@ -182,6 +186,7 @@ def init_efg(num_ranks=3,
     else:
         return efg.ExtensiveFormGame(
             'Leduc-%d' % num_ranks,
+            payoff_matrix,
             payoff_matrix,
             begin,
             end,

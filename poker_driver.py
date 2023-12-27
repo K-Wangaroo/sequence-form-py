@@ -6,6 +6,7 @@ import math
 import sys
 import time
 import numpy as np
+import csv
 
 from extensive_form_game import blsp_reader
 from extensive_form_game import libef_reader # this line can be commented in in order to get the libgg reader
@@ -158,6 +159,14 @@ parser.add_argument(
     help='whether to output the num_outputs outputs spaced ' +
     'according to linear or log-scale x axes.')
 
+#NEW: text_file names
+parser.add_argument(
+    '-f',
+    '--file',
+    default='output',
+    dest='filename',
+    help='Name of files for outputs')
+
 args = parser.parse_args()
 
 num_iterations = args.num_iterations
@@ -201,7 +210,8 @@ elif args.game == 'ri':
     game = ri.init_efg(
         num_ranks=args.num_ranks,
         prox_infoset_weights=args.prox_infoset_weights,
-        prox_scalar=args.prox_scalar)
+        prox_scalar=args.prox_scalar,
+        filename=args.filename)
 elif '.blsp' in args.game:
     game = blsp_reader.make_efg_from_file(
         args.game,
@@ -301,17 +311,26 @@ for alg_idx, alg in enumerate(algs_to_run):
 
     print('EOD', file=gnuplot_out)
     profile = opt.profile()
+    
+    npz_name = args.filename + "_strategy.npz"
 
-    print("Player 0 Profile:")
-    print("bet / check / call / fold")
-    for i in range(3):
-        print("Rank " + str(i))
-        print(profile[0][i*4+1:(i+1)*4+1]) 
-    print("Player 1 Profile:")
-    print("call / fold / bet / check")
-    for i in range(3):
-        print("Rank " + str(i))
-        print(profile[1][i*4+1:(i+1)*4+1]) 
+    # with open(csv_name, 'w', newline='') as csvfile:
+    #     writer = csv.writer(csvfile)
+    #     writer.writerows(profile)
+    
+    np.savez(npz_name, p1=profile[0], p2=profile[1])
+
+
+    # print("Player 0 Profile:")
+    # print("bet / check / call / fold")
+    # for i in range(3):
+    #     print("Rank " + str(i))
+    #     print(profile[0][i*4+1:(i+1)*4+1]) 
+    # print("Player 1 Profile:")
+    # print("call / fold / bet / check")
+    # for i in range(3):
+    #     print("Rank " + str(i))
+    #     print(profile[1][i*4+1:(i+1)*4+1]) 
 
 print("""
 set terminal png

@@ -60,6 +60,9 @@ def init_efg(num_ranks=3,
     else:
         alpha = 1.0 / (num_ranks * (num_ranks - 1))
 
+    # right now the payoff matrix is what incorporates probability
+	# BE CAREFUL: need to calculate utility THEN multiply by alpha
+
     dimension = (num_ranks * 4 + 1, num_ranks * 4 + 1)
 
     # P1 info sets: 0 /c/(bet, check), 1 /c//check/bet/(call, fold)
@@ -101,8 +104,8 @@ def init_efg(num_ranks=3,
         if all_negative:
             offset = -3
         
-        risk_alpha_0 = 0.01
-        risk_alpha_1 = 0.01
+        risk_alpha_0 = 1/3
+        risk_alpha_1 = 1/3
         # utility negative if A_0 wins
 		# so A_0 wins means that value = -2*alpha
 		# winner means the value passed in should be positive
@@ -138,9 +141,9 @@ def init_efg(num_ranks=3,
             all_negative=all_negative,
             offset=2 * offset * (num_ranks * (num_ranks - 1)), )
     else:
-        print(A_0)
-        print("///")
-        print(A_1)
+        # print(A_0)
+        # print("///")
+        # print(A_1)
         return efg.ExtensiveFormGame(
             "Kuhn%d EFG" % num_ranks,
             A_0,

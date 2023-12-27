@@ -22,7 +22,10 @@ class MatrixGame:
         br_y, _ = self.domain(1).support(self.utility_for(1, x))
         return br_x + br_y, br_x - value, br_y + value, value
 
-    def profile_value(self, x, y):
+    def profile_value_x(self, x, y):
+        return np.dot(x, self.utility_for(0, y))
+    
+    def profile_value_y(self, x, y):
         return np.dot(x, self.utility_for(0, y))
 
     def utility_for(self, player, opponent_strategy):
